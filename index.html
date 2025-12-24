@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>13 Wishes: Ethereal Torch</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            margin: 0; height: 100vh; overflow: hidden;
+            background-color: #020101;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+            background: radial-gradient(circle at center, #1f0a0a 0%, #080404 60%, #000000 100%);
+        }
+
+        #noise-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+            pointer-events: none; opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #vignette-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.9) 100%);
+        }
+
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .input_video { display: none; }
+
+        #ui-panel {
+            position: absolute; bottom: 50px; 
+            background: rgba(15, 5, 5, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px 50px;
+            border-radius: 4px;
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            text-align: center;
+            z-index: 10; pointer-events: none;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            transform: translateY(0);
+            transition: transform 0.3s;
+        }
+        
+        #status { 
+            font-family: 'Cinzel Decorative', serif;
+            font-weight: bold; color: #e6c200; margin-bottom: 5px; font-size: 22px; 
+            text-shadow: 0 0 20px rgba(230, 194, 0, 0.5);
+            letter-spacing: 4px; 
+        }
+        #instruction {
+            font-family: 'Playfair Display', serif;
+            color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 3px;
+            text-transform: uppercase; margin-top: 5px;
+        }
+
+        #setup {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(8, 5, 5, 0.98); z-index: 50; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        #setup h2 { 
+            font-family: 'Cinzel Decorative'; color:#d4af37; margin-bottom: 30px; 
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.3); font-size: 30px;
+        }
+        .inputs { max-height: 50vh; overflow-y: auto; width: 100%; max-width: 450px; padding: 0 20px; box-sizing: border-box;}
+        input {
+            width: 100%; background: rgba(255,255,255,0.02); 
+            border: none; border-bottom: 1px solid #333; color: #d4af37;
+            padding: 15px; margin-bottom: 10px; box-sizing: border-box;
+            font-family: 'Playfair Display'; font-style: italic; font-size: 16px; text-align: center;
+            transition: all 0.3s;
+        }
+        input:focus { background: rgba(212, 175, 55, 0.08); border-bottom-color: #d4af37; outline: none; letter-spacing: 1px;}
+        button {
+            margin-top: 40px; padding: 15px 60px; 
+            background: linear-gradient(135deg, #400, #600);
+            color: #d4af37; border: 1px solid #700; 
+            cursor: pointer; letter-spacing: 4px; font-family: 'Cinzel Decorative';
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            transition: all 0.3s;
+        }
+        button:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(212, 175, 55, 0.3); }
+
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; font-family: 'Cinzel Decorative'; z-index: 100; font-size: 12px; letter-spacing: 2px; }
+        .reset { position: fixed; bottom: 15px; left: 15px; color: #333; cursor: pointer; z-index: 100; font-size: 10px; opacity: 0.3; font-family: sans-serif; }
+    /* --- 新增：终结淡出效果 --- */
+    .fade-out-all > * {
+            opacity: 0 !important;
+            transition: opacity 4s ease-out !important; /* 4秒缓慢淡出 */
+            pointer-events: none; /* 禁止操作 */
+        }
+        /* 让状态文字晚一点淡出，保留最后一眼 */
+        .fade-out-all #ui-panel #status {
+            transition: opacity 5s ease-out 1s !important; /* 延迟1秒，5秒淡出 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bg-layer"></div>
+    <div id="loading">INITIALIZING AETHER...</div>
+    <video class="input_video"></video>
+    <canvas id="world"></canvas>
+    
+    <div id="noise-layer"></div>
+    <div id="vignette-layer"></div>
+
+    <div id="ui-panel">
+        <div id="status">UNLINKED</div>
+        <div id="instruction">🖐 MOVE | 👌 PINCH | ✊ BURN</div>
+    </div>
+
+    <div id="setup">
+        <h2>13 Covenants</h2>
+        <div class="inputs" id="inputList"></div>
+        <button onclick="saveWishes()">SEAL FATE</button>
+    </div>
+
+    <div class="reset" onclick="resetData()">RESET</div>
+    
+    <script>
+        const DB_KEY = '13_torch_wishes';
+        const DATE_KEY = '13_torch_date';
+        const TEST_MODE = false; 
+
+        let wishes = [];
+        let papers = [];
+        let particles = [];
+        let fireflies = [];
+        
+        let canvas, ctx;
+        let width, height;
+        let focalLength = 900;
+        let globalRotY = 0, globalRotX = 0;
+        const ROTATION_CENTER_Z = 1200; 
+
+        let handPos = { x: 0, y: 0, visible: false };
+        let handSmooth = { x: 0.5, y: 0.5 }; // 平滑后的光标位置
+        let isFist = false;
+        let isPinch = false; 
+        
+        let state = 'CHAOS'; 
+        let chosenIndex = -1;
+        let cameraReady = false;
+        let shakeIntensity = 0; // 屏幕震动强度
+        
+        window.onload = () => {
+            canvas = document.getElementById('world');
+            ctx = canvas.getContext('2d');
+            resize();
+            window.addEventListener('resize', resize);
+            
+            for(let i=0; i<80; i++) fireflies.push(new Firefly());
+            initData();
+        };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function initData() {
+            const data = localStorage.getItem(DB_KEY);
+            if (data) {
+                wishes = JSON.parse(data);
+                checkDaily();
+            } else {
+                showSetup();
+            }
+        }
+
+        function showSetup() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('setup').style.display = 'flex';
+            const list = document.getElementById('inputList');
+            list.innerHTML = '';
+            for(let i=0; i<13; i++) {
+                let inp = document.createElement('input');
+                inp.placeholder = `Wish ${i+1}`;
+                list.appendChild(inp);
+            }
+        }
+
+        function saveWishes() {
+            const inps = document.querySelectorAll('#inputList input');
+            let temp = [];
+            inps.forEach(i => { if(i.value) temp.push(i.value) });
+            if(temp.length < 13) return alert("Ritual requires 13 wishes.");
+            wishes = temp;
+            localStorage.setItem(DB_KEY, JSON.stringify(wishes));
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            checkDaily();
+        }
+
+        function resetData() {
+            if(confirm('Reset all data?')) { localStorage.clear(); location.reload(); }
+        }
+
+        function checkDaily() {
+            const lastDate = localStorage.getItem(DATE_KEY);
+            const today = new Date().toDateString();
+            
+            if (!TEST_MODE && lastDate === today) {
+                state = 'DONE';
+                updStatus("RITUAL COMPLETE", "Return tomorrow night", "#666");
+                document.getElementById('loading').style.display = 'none';
+            } else if (wishes.length === 1) {
+                state = 'FINAL';
+                initPapers(); 
+                papers[0].targetPos = {x:0, y:0, z:300};
+                papers[0].state = 'LOCKED';
+                updStatus("THE FINAL WISH", "It is yours to keep", "#e6c200");
+                startCamera();
+                loop();
+            } else {
+                state = 'CHAOS';
+                initPapers();
+                startCamera();
+                loop();
+            }
+        }
+
+        function updStatus(main, sub, color) {
+            const s = document.getElementById('status');
+            s.innerText = main;
+            if(color) s.style.color = color;
+            document.getElementById('instruction').innerText = sub;
+        }
+
+        // ==========================================
+        // 核心渲染循环
+        // ==========================================
+        function loop() {
+            // 震动逻辑
+            let tx = 0, ty = 0;
+            if (shakeIntensity > 0) {
+                tx = (Math.random() - 0.5) * shakeIntensity;
+                ty = (Math.random() - 0.5) * shakeIntensity;
+                shakeIntensity *= 0.9; // 衰减
+            }
+
+            ctx.setTransform(1, 0, 0, 1, tx, ty); // 应用震动
+            ctx.clearRect(0,0,width,height); 
+
+            // 1. 萤火虫
+            ctx.globalCompositeOperation = 'lighter';
+            fireflies.forEach(p => { p.update(); p.draw(); });
+            
+            // 2. 纸张 (Z-sort)
+            ctx.globalCompositeOperation = 'source-over';
+            papers.sort((a, b) => b.z - a.z);
+            papers.forEach(p => { p.update(); p.draw(); });
+            
+            // 3. 燃烧粒子
+            drawBurningParticles();
+            
+            // 4. 光标与连线
+            drawCursor(); 
+            
+            updateLogic();
+            requestAnimationFrame(loop);
+        }
+
+        // ==========================================
+        // 视觉特效：光标、连线、光照计算
+        // ==========================================
+        function drawCursor() {
+            if (!handPos.visible || !cameraReady) return;
+
+            // 光标平滑插值
+            handSmooth.x += (handPos.x - handSmooth.x) * 0.15;
+            handSmooth.y += (handPos.y - handSmooth.y) * 0.15;
+
+            const cx = handSmooth.x * width;
+            const cy = handSmooth.y * height;
+
+            // 连线特效 (Tether)
+            if (isPinch && chosenIndex !== -1 && state === 'LOCKED') {
+                const p = papers[chosenIndex];
+                // 简单的目标点估计（屏幕中心）
+                const tx = width/2; 
+                const ty = height/2;
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                // 能量抖动连线
+                const cp1x = cx + (tx-cx)*0.3 + (Math.random()-0.5)*30;
+                const cp1y = cy + (ty-cy)*0.3 + (Math.random()-0.5)*30;
+                const cp2x = cx + (tx-cx)*0.7 + (Math.random()-0.5)*30;
+                const cp2y = cy + (ty-cy)*0.7 + (Math.random()-0.5)*30;
+                
+                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, tx, ty);
+                ctx.strokeStyle = `rgba(255, 200, 50, ${0.5 + Math.random()*0.5})`;
+                ctx.lineWidth = 2 + Math.random()*2;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ffaa00';
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 魔法光球 (The Orb)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            
+            let color = '#e6c200'; // 金色
+            let size = 20;
+            if (isPinch) { color = '#ff8800'; size = 15; }
+            if (isFist) { color = '#ff0000'; size = 30; }
+
+            // 核心
+            let grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size*2);
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(0.2, color);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(cx, cy, size*2, 0, Math.PI*2); ctx.fill();
+            
+            // 外环旋转
+            if(!isPinch) {
+                ctx.translate(cx, cy);
+                ctx.rotate(Date.now()/800);
+                ctx.strokeStyle = `rgba(255,255,255,0.3)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0,0, size+10, 0, Math.PI*2); ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        // ==========================================
+        // 核心：3D 纸张类 (含动态光照)
+        // ==========================================
+        class Paper {
+            constructor(text, index) {
+                this.text = text;
+                this.index = index;
+                const theta = (index / 13) * Math.PI * 2 + Math.random()*0.5;
+                const r = 700 + Math.random() * 200;
+                this.x = r * Math.cos(theta);
+                this.y = (Math.random() - 0.5) * 600; 
+                this.z = ROTATION_CENTER_Z + r * Math.sin(theta) * 0.5; 
+                this.axisX = Math.random() * Math.PI * 2;
+                this.axisY = Math.random() * Math.PI * 2;
+                this.rotateSpeed = (Math.random() - 0.5) * 0.02;
+                this.state = 'FLOATING';
+                this.burnProgress = 0;
+            }
+
+            update() {
+                if (this.state === 'FLOATING') {
+                    this.axisY += this.rotateSpeed;
+                    
+                    if (handPos.visible && !isFist && !isPinch && cameraReady) {
+                        const targetRotY = (handSmooth.x - 0.5) * 2.8; 
+                        const targetRotX = (handSmooth.y - 0.5) * 1.5;
+                        globalRotY += (targetRotY - globalRotY) * 0.08;
+                        globalRotX += (targetRotX - globalRotX) * 0.08;
+                    } else {
+                        globalRotY += 0.001; 
+                    }
+                } else if (this.state === 'LOCKED') {
+                    this.x += (0 - this.x) * 0.1;
+                    this.y += (0 - this.y) * 0.1;
+                    this.z += (300 - this.z) * 0.1;
+                    let targetAngle = -globalRotY; 
+                    this.axisY = targetAngle; 
+                    this.axisX = 0;
+                    
+                    if (this.state === 'LOCKED' && isFist && state !== 'FINAL') {
+                        this.burnProgress += 0.015;
+                        shakeIntensity = 5 + this.burnProgress * 10; // 燃烧引起震动
+                        for(let k=0; k<6; k++) createBurningSpark(0, 0);
+                        if (this.burnProgress >= 1.2) finishRitual(this.index);
+                    } else {
+                         this.burnProgress = Math.max(0, this.burnProgress - 0.05);
+                    }
+                }
+            }
+
+            draw() {
+                if (this.burnProgress >= 1.1) return;
+
+                let x = this.x, y = this.y, z = this.z;
+
+                if (this.state === 'FLOATING') {
+                    // 磁力排斥效果 (Magnetic)
+                    // 如果手在附近，推开一点点
+                    if(handPos.visible && cameraReady) {
+                         // 粗略估算屏幕投影距离不可行，因为还没投影。
+                         // 这里不做复杂的反投影，只做简单的Z轴呼吸
+                    }
+
+                    let relZ = z - ROTATION_CENTER_Z;
+                    let cosY = Math.cos(globalRotY), sinY = Math.sin(globalRotY);
+                    let x1 = x * cosY - relZ * sinY;
+                    let z1 = relZ * cosY + x * sinY;
+                    let cosX = Math.cos(globalRotX), sinX = Math.sin(globalRotX);
+                    let y1 = y * cosX - z1 * sinX;
+                    z1 = z1 * cosX + y * sinX;
+                    x = x1; y = y1; z = z1 + ROTATION_CENTER_Z;
+                }
+
+                let scale = focalLength / (focalLength + z);
+                if (scale < 0 || z < -200) return; 
+
+                let screenX = width/2 + x * scale;
+                let screenY = height/2 + y * scale;
+
+                // --- 动态光照计算 (Dynamic Lighting) ---
+                // 计算光标到卡片的屏幕距离
+                let distToHand = 9999;
+                if(handPos.visible) {
+                    const cx = handSmooth.x * width;
+                    const cy = handSmooth.y * height;
+                    distToHand = Math.hypot(cx - screenX, cy - screenY);
+                }
+                
+                // 光照强度：越近越亮 (Torch effect)
+                let torchIntensity = Math.max(0, 1 - distToHand / 400); 
+
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.scale(scale, scale);
+                
+                let totalRotation = this.axisY + globalRotY; 
+                if (this.state === 'LOCKED') totalRotation = 0; 
+                let cosR = Math.cos(totalRotation);
+                let widthScale = Math.abs(cosR); 
+                
+                // 绘制厚度
+                if (widthScale < 0.98) {
+                    let thickness = 5; 
+                    let sideColor = '#3d2b0f'; // 暗金色
+                    for(let i=1; i<=thickness; i++) {
+                        ctx.save();
+                        let off = i * (cosR > 0 ? 1 : -1); 
+                        ctx.translate(off, 0); 
+                        ctx.scale(widthScale, 1);
+                        ctx.fillStyle = sideColor;
+                        ctx.fillRect(-60, -40, 120, 80);
+                        ctx.restore();
+                    }
+                }
+
+                ctx.scale(widthScale, 1); 
+                
+                // 燃烧辉光
+                if ((this.state === 'LOCKED' || this.burnProgress > 0) && scale > 0.6) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    let glow = this.state === 'LOCKED' ? 0.6 : this.burnProgress * 4;
+                    ctx.shadowColor = this.burnProgress>0 ? '#ff3300' : '#ffa500';
+                    ctx.shadowBlur = 40 * glow;
+                    ctx.fillStyle = `rgba(255, 100, 50, ${glow * 0.4})`;
+                    ctx.fillRect(-62, -42, 124, 84);
+                    ctx.restore();
+                }
+
+                let isFront = cosR > 0 || this.state === 'LOCKED';
+                
+                // 基础光照 (基于角度) + 火炬光照 (基于距离)
+                let ambient = 0.3 + 0.4 * widthScale; 
+                let totalLight = ambient + torchIntensity * 0.6; // 叠加手的光照
+                if(this.state === 'LOCKED') totalLight = 1.2; // 锁定态高亮
+
+                ctx.globalAlpha = Math.min(1, (z+500)/1500) * (1-this.burnProgress);
+                
+                if (this.burnProgress > 0) {
+                    let c = Math.floor(255 * (1-this.burnProgress));
+                    ctx.fillStyle = `rgb(255, ${c}, ${c*0.5})`;
+                } else {
+                    if (isFront) {
+                        // 正面：受火炬影响变亮变暖
+                        let hue = 40 + torchIntensity * 10; // 越亮越黄
+                        let lit = 30 + totalLight * 40; 
+                        ctx.fillStyle = `hsl(${hue}, 40%, ${lit}%)`;
+                    } else {
+                        ctx.fillStyle = `hsl(35, 30%, ${15 + totalLight*10}%)`; 
+                    }
+                }
+                
+                ctx.strokeStyle = `rgba(255, 215, 0, ${totalLight})`; // 金边
+                ctx.lineWidth = 2 / widthScale; 
+                
+                ctx.beginPath();
+                ctx.rect(-60, -40, 120, 80);
+                ctx.fill();
+                ctx.stroke();
+
+                if (isFront && widthScale > 0.2) {
+                    ctx.save();
+                    ctx.scale(1/widthScale, 1); 
+                    if (this.state === 'LOCKED') {
+                        ctx.fillStyle = '#1a0a0a';
+                        ctx.font = 'italic 500 12px "Playfair Display"';
+                        ctx.textAlign = 'center'; 
+                        ctx.fillText(this.text, 0, 5);
+                    } else {
+                        let grad = ctx.createRadialGradient(0,0,5, 0,0,15);
+                        grad.addColorStop(0, '#ffd700'); grad.addColorStop(1, '#8b4513');
+                        ctx.fillStyle = grad; 
+                        ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+                        // 封蜡反光
+                        ctx.fillStyle = `rgba(255,255,255, ${torchIntensity * 0.5})`;
+                        ctx.beginPath(); ctx.arc(-3, -3, 5, 0, Math.PI*2); ctx.fill();
+                    }
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+        }
+
+        function initPapers() { papers = wishes.map((w, i) => new Paper(w, i)); }
+
+        class Firefly {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = (Math.random() - 0.5) * width * 3;
+                this.y = (Math.random() - 0.5) * height * 3;
+                this.z = Math.random() * 2000 + 100;
+                this.size = Math.random() * 2 + 1;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.pulse = Math.random() * 10;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.pulse += 0.05;
+                if(Math.abs(this.x) > width*2) this.reset();
+            }
+            draw() {
+                let scale = focalLength / (focalLength + this.z);
+                let sx = width/2 + this.x * scale;
+                let sy = height/2 + this.y * scale;
+                let a = 0.2 + Math.sin(this.pulse)*0.2;
+                ctx.globalAlpha = a;
+                ctx.fillStyle = '#ffd';
+                ctx.beginPath(); ctx.arc(sx, sy, this.size*scale, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        function createBurningSpark(x, y) {
+            particles.push({
+                x: width/2 + (Math.random()-0.5)*80, y: height/2 + (Math.random()-0.5)*60,
+                vx: (Math.random()-0.5) * 25, vy: -Math.random() * 30 - 5,
+                life: 1, size: Math.random() * 8 + 3, hue: 10 + Math.random() * 40
+            });
+        }
+
+        function drawBurningParticles() {
+            ctx.globalCompositeOperation = 'lighter';
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.5;
+                p.life -= 0.03; p.size *= 0.94; 
+                if(p.life <= 0) { particles.splice(i, 1); continue; }
+                let color = `hsla(${p.hue}, 100%, 60%, ${p.life})`;
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function updateLogic() {
+            if (state === 'DONE' || state === 'FINAL') return;
+
+            if (state === 'CHAOS') {
+                if (handPos.visible && cameraReady) {
+                    if (isPinch) {
+                        updStatus("LINKING...", "Hold pinch to summon", "#fff");
+                        triggerSummon();
+                    } else if (!isFist) {
+                        updStatus("OBSERVING", "Pinch to Select", "#e6c200");
+                    }
+                } else {
+                    updStatus("WAITING FOR HAND", "Place hand in view", "#666");
+                }
+            } else if (state === 'LOCKED') {
+                if (isFist) {
+                    updStatus("BURNING...", "Hold Fist", "#ff3300");
+                } else {
+                    updStatus("FATE SEALED", "Fist to Burn", "#e6c200");
+                }
+            }
+        }
+
+        function triggerSummon() {
+            state = 'SUMMONED';
+            let bestIdx = -1;
+            let minDist = 99999;
+            papers.forEach((p, i) => {
+                if(p.state !== 'FLOATING') return;
+                let relZ = p.z - ROTATION_CENTER_Z;
+                let cosY = Math.cos(globalRotY), sinY = Math.sin(globalRotY);
+                let z1 = relZ * cosY + p.x * sinY + ROTATION_CENTER_Z;
+                if (z1 > 0 && z1 < minDist) { minDist = z1; bestIdx = i; }
+            });
+            chosenIndex = bestIdx;
+            if(chosenIndex !== -1) { papers[chosenIndex].state = 'LOCKED'; state = 'LOCKED'; }
+        }
+
+        // ==========================================
+        // 新版：带有“余韵”效果的结束函数
+        // ==========================================
+        function finishRitual(index) {
+            state = 'DONE';
+            
+            // 1. 数据处理
+            wishes.splice(index, 1);
+            localStorage.setItem(DB_KEY, JSON.stringify(wishes));
+            localStorage.setItem(DATE_KEY, new Date().toDateString());
+            
+            // 2. 视觉高潮：剧烈震动
+            shakeIntensity = 30; 
+            
+            // 3. 文字判词：更具仪式感
+            // 如果是最后一个愿望，显示不同文字
+            if (wishes.length === 0) {
+                updStatus("THE CYCLE IS COMPLETE", "You are free", "#fff");
+            } else {
+                updStatus("THE VOID ACCEPTS", "Return tomorrow", "#fff");
+            }
+            
+            // 4. 粒子飞升效果
+            // 修改所有现存粒子的行为，让它们向上飞
+            particles.forEach(p => {
+                p.vy = -Math.random() * 5 - 2; // 强制向上速度
+                p.vx *= 0.5; // 减少横向扩散
+                p.life = 1.5; // 延长一点寿命以便飞出屏幕
+            });
+            // 停止生成新萤火虫，旧的加速离开
+            fireflies.forEach(f => {
+                f.z += 50; // 快速远离镜头
+                f.alphaBase *= 0.9; // 快速变暗
+            });
+
+            // 5. 启动终极淡出 (1秒后开始，给震动一点时间)
+            setTimeout(() => {
+                document.body.classList.add('fade-out-all');
+            }, 1000);
+
+            // 6. 延长等待时间到 6 秒，让淡出完成，然后刷新
+            setTimeout(() => location.reload(), 6000);
+        }
+
+        function startCamera() {
+            const video = document.querySelector('.input_video');
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`});
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            hands.onResults(onHandsResult);
+            const cam = new Camera(video, { onFrame: async () => await hands.send({image: video}), width: 640, height: 480 });
+            cam.start().then(() => { document.getElementById('loading').style.display='none'; cameraReady=true; });
+        }
+
+        function onHandsResult(results) {
+            if (results.multiHandLandmarks.length > 0) {
+                handPos.visible = true;
+                const lm = results.multiHandLandmarks[0];
+                handPos.x = 1 - lm[9].x; handPos.y = lm[9].y;
+                const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+                isPinch = pinchDist < 0.05; 
+                isFist = Math.hypot(lm[8].x-lm[0].x, lm[8].y-lm[0].y) < 0.35;
+                if(isFist) isPinch = false;
+            } else {
+                handPos.visible = false; isFist = false; isPinch = false;
+            }
+        }
+    </script>
+</body>
+</html>
