@@ -102,31 +102,51 @@ txt(s, Inches(0.95), Inches(4.9), Inches(11.5), Inches(1.6),
      [('Team: [Founder name] · [advisors]        2026-07-03', 12, RGBColor(0xC9,0xB5,0xC2), False)]],
     line_spacing=1.3)
 
-# ============================================================ 2 PROBLEM
-s = slide(); header(s, 'PROBLEM', 'A therapy you must dose "by feel" — with no way to record the feeling', '02'); footer(s)
-txt(s, Inches(0.6), Inches(1.45), Inches(12.1), Inches(1.0),
-    [[('Menopause hormone therapy (HRT) must be ', 16, INK, False),
-      ('titrated by symptoms, not blood levels', 16, PLUM, True),
-      (' — per NAMS/ACOG guidelines. Yet nothing records those symptoms.', 16, INK, False)]], line_spacing=1.15)
-# three stat cards
-cards = [
-    ('3–6 months', 'to find a stable dose; every change needs 4–6 weeks to judge', PLUM),
-    ('~50%', 'quit HRT in the first year — 64–87% of them blame side-effects (i.e. the dose was never dialled in)', ROSE),
-    ('The blind window', 'panic-quitting peaks at weeks 2–3; the first follow-up is week 6–12', PLUM2),
+# ============================================================ 2 PROBLEM (v2 per working-draft discussion)
+s = slide(); header(s, 'PROBLEM', 'A therapy dosed "by feel" — and no one records the feeling', '02'); footer(s)
+rows2 = [
+    ('~1,000,000 / yr', 'women start menopause hormone therapy in the US + Canada (est.) — perimenopause is the fastest-growing segment'),
+    ('"Dose by feel."', 'NAMS/ACOG guidelines: titrate by her symptoms, not blood levels — yet no system records those symptoms'),
+    ('3–6 months of trial & error', 'each dose change takes 4–6 weeks to judge; her doctor re-doses from a 15-minute recall'),
+    ('7.4 yrs  vs  1 yr', 'symptoms last a median 7.4 years — half of women quit within 1; 62% stop abruptly against advice, 84% relapse'),
 ]
-cx = Inches(0.6); cw = Inches(3.94); gap = Inches(0.14)
-for i,(big, sub, col) in enumerate(cards):
-    x = Emu(int(cx) + i*(int(cw)+int(gap)))
-    rect(s, x, Inches(2.65), cw, Inches(2.5), CARD, line=LINEC, line_w=Pt(1), round_=True)
-    rect(s, x, Inches(2.65), cw, Inches(0.12), col, round_=False)
-    txt(s, Emu(int(x)+Emu(Inches(0.25))), Inches(2.95), Emu(int(cw)-Emu(Inches(0.5))), Inches(0.9),
-        [[(big, 30, col, True)]])
-    txt(s, Emu(int(x)+Emu(Inches(0.25))), Inches(3.95), Emu(int(cw)-Emu(Inches(0.5))), Inches(1.1),
-        [[(sub, 13.5, INK, False)]], line_spacing=1.1)
-txt(s, Inches(0.6), Inches(5.55), Inches(12.1), Inches(1.3),
-    [[('The core failure: ', 15, PLUM, True),
-      ('the patient suffers in an information vacuum for months, the clinician re-doses on a vague recall ("uh… not great?"), and half the treatment dies before it stabilises. This window is invisible to today\'s system.', 15, INK, False)]],
-    line_spacing=1.15)
+ry = Inches(1.45)
+for i,(stat, desc) in enumerate(rows2):
+    if i % 2 == 0:
+        rect(s, Inches(0.6), ry, Inches(12.1), Inches(1.0), LIGHT)
+    txt(s, Inches(0.85), ry, Inches(3.9), Inches(1.0),
+        [[(stat, 20, PLUM if i != 3 else ROSE, True)]], anchor=MSO_ANCHOR.MIDDLE, line_spacing=1.0)
+    txt(s, Inches(4.9), ry, Inches(7.6), Inches(1.0),
+        [[(desc, 13.5, INK, False)]], anchor=MSO_ANCHOR.MIDDLE, line_spacing=1.05)
+    ry = Emu(int(ry) + int(Inches(1.0)) + int(Inches(0.06)))
+# hook banner
+rect(s, Inches(0.6), Inches(5.85), Inches(12.1), Inches(0.85), PLUM, round_=True)
+txt(s, Inches(0.9), Inches(5.85), Inches(11.5), Inches(0.85),
+    [[('Titration is a craft run on recall. ', 18, WHITE, True),
+      ('It should be a data problem.', 18, GOLD, True)]],
+    anchor=MSO_ANCHOR.MIDDLE)
+txt(s, Inches(0.6), Inches(6.8), Inches(12.1), Inches(0.35),
+    [[('$13B/yr out-of-pocket on low-evidence workarounds  ·  symptomatic women incur +45% healthcare costs', 11, GREY, False)]])
+notes2 = s.notes_slide.notes_text_frame
+notes2.text = (
+    "SCRIPT (~80s):\n"
+    "Every year, about a million women in the US and Canada start hormone therapy for menopause — and perimenopause is the fastest-growing segment. "
+    "The clinical guideline for this therapy is explicit: adjust the dose by her symptoms, not blood levels. But no one — no system — records those symptoms. "
+    "So she enters three to six months of trial and error. Each dose change takes four to six weeks to judge. In those weeks she can't tell whether worsening anxiety means too little estrogen or too much, and late-night searches return horror stories. "
+    "Her doctor decides the next step from what she can recall in a fifteen-minute visit. "
+    "The result: her symptoms will last a median of 7.4 years, but half of women abandon the therapy within one. And to be precise — informed discontinuation is a good outcome; the problem is that 62% stop abruptly, against medical advice, in an information vacuum — and 84% of them relapse. "
+    "Then they spend thirteen billion dollars a year on supplements that don't work. "
+    "The problem isn't the medicine. Titration is a craft run on recall. It should be a data problem.\n\n"
+    "Q&A AMMO:\n"
+    "- ~1M/yr: MY ESTIMATE (say so proactively). Logic: ~2.5-3M current US users (JAMA: ~5% of postmenopausal women) x ~50% first-year discontinuation, with a growing stock — a 10-20k/month inflow could not sustain the pool. Validating with a claims-data slice. Supporting: Epic Research +86% Rx since 2021; Truveta: 1 in 20 women 45-54 hold an estrogen Rx.\n"
+    "- Dose by feel: NAMS 2022 Hormone Therapy Position Statement; ACOG concurs. Hormone levels fluctuate too much to guide dosing.\n"
+    "- 3-6 months / 4-6 weeks: clinical consensus; full effect up to 12 weeks.\n"
+    "- 7.4 years: SWAN study, JAMA Internal Medicine 2015, n=1,449 (Black women: median 10.1 yrs). If challenged 'symptom duration is not treatment duration': correct — the point is symptoms run in YEARS, abandonment happens in MONTHS, and 62% of it is against medical advice.\n"
+    "- Half quit yr 1: PubMed 10614674 — 48% (younger) to 62% (older); side-effects are the top stated reason (64-87%). Pharmacy DB: only 54-69% still on the ORIGINAL regimen at 1 yr.\n"
+    "- 62% abrupt / 84% relapse: BJOG 2025 systematic review (69 studies).\n"
+    "- $13B: AARP survey (>$10B of it on non-medical products). +45%: actuarial analysis cited by Elektra Health.\n"
+    "ETHICS FRAME (say aloud, esp. to women's-health investors): our goal is not retention maximisation — informed quitting is a good outcome; panic quitting against advice is the system failure we target."
+)
 
 # ============================================================ 3 SOLUTION
 s = slide(); header(s, 'SOLUTION', 'Make titration a monitored "season" — with a start, an end, and a graduation', '03'); footer(s)
