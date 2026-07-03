@@ -377,7 +377,7 @@
 <div class="navzone" id="next" aria-label="Next slide"></div>
 <div id="bar"></div>
 <div id="count">1 / 17</div>
-<div id="hint">← → · click sides · F fullscreen</div>
+<div id="hint">← → · click sides · fullscreen: ⌃⌘F (Mac) / F11 (Win)</div>
 
 <script>
 (function(){
@@ -396,8 +396,13 @@
     if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1);}
     if(e.key==='Home'){go(0);} if(e.key==='End'){go(slides.length-1);}
     if(e.key==='f'||e.key==='F'){
-      if(document.fullscreenElement){document.exitFullscreen();}
-      else{document.documentElement.requestFullscreen();}
+      var d=document,el=d.documentElement;
+      var fs=d.fullscreenElement||d.webkitFullscreenElement;
+      if(fs){(d.exitFullscreen||d.webkitExitFullscreen).call(d);}
+      else{
+        var req=el.requestFullscreen||el.webkitRequestFullscreen;
+        if(req){req.call(el).catch(function(){});}
+      }
     }
   });
   var x0=null;
