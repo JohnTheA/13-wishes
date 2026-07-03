@@ -1,0 +1,396 @@
+<title>Attune — Milestone 2</title>
+<style>
+  :root{
+    --ink:#0E0C10; --paper:#F4F1F3; --muted:#9A8F98; --accent:#E2A1A6;
+    --line:rgba(244,241,243,.14); --dim:rgba(244,241,243,.55);
+  }
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow:hidden;height:100%;}
+  #deck{position:fixed;inset:0;}
+  .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:6vh 8vw;box-sizing:border-box;}
+  .slide.active{display:flex;animation:rise .45s ease-out both;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide.active{animation:none}}
+
+  .eyebrow{font-size:clamp(11px,1.1vw,14px);letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin-bottom:2.2vh;}
+  h1{font-size:clamp(34px,5.6vw,88px);line-height:1.04;font-weight:800;letter-spacing:-.02em;
+    margin:0 0 3vh 0;max-width:22ch;text-wrap:balance;}
+  h1 .soft{color:var(--muted);font-weight:700;}
+  .sub{font-size:clamp(16px,1.7vw,24px);line-height:1.45;color:var(--dim);max-width:52ch;margin:0;}
+  .sub b{color:var(--paper);font-weight:600;}
+  .accent{color:var(--accent);}
+  .center{align-items:center;text-align:center;}
+  .center h1{max-width:26ch;}
+  .center .sub{margin-left:auto;margin-right:auto;}
+  sup{font-size:.45em;color:var(--muted);font-weight:400;margin-left:.15em;}
+
+  .statrow{display:flex;gap:6vw;margin-top:4vh;flex-wrap:wrap;}
+  .stat .n{font-size:clamp(40px,6vw,92px);font-weight:800;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;line-height:1;}
+  .stat .l{font-size:clamp(13px,1.3vw,17px);color:var(--dim);margin-top:1.2vh;max-width:22ch;line-height:1.4;}
+
+  .rows{display:flex;flex-direction:column;gap:0;margin-top:3vh;max-width:70vw;}
+  .row{display:flex;gap:3vw;align-items:baseline;padding:2.2vh 0;border-top:1px solid var(--line);}
+  .row:first-child{border-top:none;}
+  .row .k{flex:0 0 30%;font-weight:700;font-size:clamp(16px,1.9vw,27px);letter-spacing:-.01em;}
+  .row .v{font-size:clamp(14px,1.5vw,20px);color:var(--dim);line-height:1.45;max-width:52ch;}
+  .row .v b{color:var(--paper);font-weight:600;}
+
+  .quiet{position:absolute;bottom:5.5vh;left:8vw;right:8vw;font-size:clamp(11px,1.05vw,14px);
+    color:var(--muted);line-height:1.5;max-width:80ch;}
+
+  /* rings slide */
+  .rings{display:flex;gap:0;margin-top:4vh;max-width:74vw;flex-direction:column;}
+  .ring{display:flex;align-items:baseline;gap:2.5vw;padding:2vh 0;border-top:1px solid var(--line);}
+  .ring:first-child{border-top:none;}
+  .ring .when{flex:0 0 14%;font-size:clamp(11px,1.05vw,14px);letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent);font-weight:600;}
+  .ring .amt{flex:0 0 22%;font-size:clamp(26px,3.4vw,52px);font-weight:800;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;}
+  .ring .what{font-size:clamp(13px,1.4vw,18px);color:var(--dim);line-height:1.4;max-width:44ch;}
+
+  /* 2x2 */
+  .grid2{position:relative;width:min(66vh,52vw);aspect-ratio:1.35;margin-top:3vh;}
+  .grid2 .ax{position:absolute;background:var(--line);}
+  .grid2 .axh{left:0;right:0;top:50%;height:1px;}
+  .grid2 .axv{top:0;bottom:0;left:50%;width:1px;}
+  .grid2 .lab{position:absolute;font-size:clamp(10px,1vw,13px);color:var(--muted);
+    letter-spacing:.14em;text-transform:uppercase;}
+  .q{position:absolute;width:44%;font-size:clamp(12px,1.25vw,17px);line-height:1.4;color:var(--dim);}
+  .q b{color:var(--paper);display:block;font-size:clamp(13px,1.4vw,19px);margin-bottom:.4vh;}
+  .q.us b{color:var(--accent);}
+  .q.ghost{color:var(--muted);font-style:italic;}
+
+  .serif{font-family:"New York",ui-serif,Georgia,"Times New Roman",serif;font-weight:600;
+    letter-spacing:-.01em;}
+
+  /* canvas grid */
+  .canvas{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto auto;
+    gap:2px;margin-top:3vh;font-size:clamp(10.5px,1.05vw,14px);line-height:1.4;}
+  .box{background:rgba(244,241,243,.05);padding:1.6vh 1vw;min-height:11vh;}
+  .box h4{margin:0 0 .8vh 0;font-size:clamp(10px,.95vw,12.5px);letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);font-weight:600;display:flex;justify-content:space-between;gap:.5em;}
+  .box h4 .tag{color:var(--muted);letter-spacing:.06em;font-weight:500;}
+  .box p{margin:0;color:var(--dim);}
+  .box b{color:var(--paper);font-weight:600;}
+  .box.tall{grid-row:span 2;}
+
+  /* landing mock */
+  .mock{margin-top:3vh;background:rgba(244,241,243,.05);border:1px solid var(--line);
+    border-radius:10px;max-width:56vw;padding:4vh 3.5vw;}
+  .mock .mh{font-size:clamp(20px,2.4vw,34px);font-weight:800;letter-spacing:-.015em;line-height:1.15;margin:0 0 1.6vh;}
+  .mock .ms{font-size:clamp(13px,1.35vw,17px);color:var(--dim);line-height:1.5;margin:0 0 2.4vh;max-width:54ch;}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;
+    padding:.7em 1.2em;font-size:clamp(12px,1.2vw,15px);color:var(--paper);margin-right:.8em;margin-bottom:.8em;}
+  .cta{display:inline-block;background:var(--accent);color:var(--ink);border-radius:999px;
+    padding:.75em 1.4em;font-size:clamp(12px,1.25vw,16px);font-weight:700;}
+
+  /* sources */
+  .srcs{margin-top:2.5vh;columns:2;column-gap:4vw;font-size:clamp(10.5px,1.02vw,13.5px);
+    line-height:1.55;color:var(--dim);max-height:66vh;overflow-y:auto;}
+  .srcs div{break-inside:avoid;margin-bottom:1.2vh;}
+  .srcs b{color:var(--paper);font-weight:600;}
+  .srcs .n{color:var(--accent);font-weight:700;margin-right:.5em;font-variant-numeric:tabular-nums;}
+
+  /* chrome */
+  #bar{position:fixed;left:0;bottom:0;height:2px;background:var(--accent);width:0;transition:width .3s;}
+  #count{position:fixed;right:2.2vw;bottom:2.6vh;font-size:12px;color:var(--muted);
+    font-variant-numeric:tabular-nums;letter-spacing:.1em;}
+  #hint{position:fixed;left:2.2vw;bottom:2.6vh;font-size:12px;color:var(--muted);opacity:.8;}
+  .navzone{position:fixed;top:0;bottom:0;width:18vw;cursor:pointer;z-index:5;}
+  #prev{left:0;} #next{right:0;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+
+  @media (max-width:720px){
+    .slide{padding:5vh 7vw;}
+    .rows,.rings{max-width:100%;}
+    .row{flex-direction:column;gap:.6vh;}
+    .row .k{flex:none;}
+    .grid2{width:86vw;aspect-ratio:1.1;}
+    .canvas{grid-template-columns:repeat(2,1fr);}
+    .box.tall{grid-row:auto;}
+    .mock{max-width:100%;}
+    .srcs{columns:1;max-height:60vh;}
+    .statrow{gap:4vh;flex-direction:column;}
+  }
+  @media print{
+    html,body{overflow:visible;background:var(--ink);}
+    .slide{display:flex !important;position:relative;page-break-after:always;height:100vh;}
+    .navzone,#bar,#count,#hint{display:none;}
+  }
+</style>
+
+<div id="deck">
+
+<!-- 1 · TITLE -->
+<section class="slide center">
+  <div class="eyebrow">Milestone Presentation №2</div>
+  <h1 style="font-size:clamp(56px,9vw,150px);">Attune</h1>
+  <p class="sub">The titration loop for hormone therapy.<br>
+  <span style="color:var(--muted)">Turning “dose by feel” into a data problem — US &amp; Canada.</span></p>
+</section>
+
+<!-- 2 · PROBLEM HOOK -->
+<section class="slide">
+  <div class="eyebrow">Problem</div>
+  <h1>“Dose by feel.”</h1>
+  <p class="sub">Clinical guidelines are explicit: menopause hormone therapy is titrated by <b>her symptoms</b> — not blood levels.<sup>1</sup><br><br>
+  Yet no system records those symptoms.</p>
+</section>
+
+<!-- 3 · PROBLEM NUMBERS -->
+<section class="slide">
+  <div class="eyebrow">Problem</div>
+  <h1>She waits. Her doctor guesses.</h1>
+  <div class="statrow">
+    <div class="stat"><div class="n">3–6<span style="font-size:.4em;font-weight:700;"> mo</span></div>
+      <div class="l">of trial &amp; error to find a stable dose — 4–6 weeks per change<sup>2</sup></div></div>
+    <div class="stat"><div class="n">~50%</div>
+      <div class="l">of women quit the therapy within the first year<sup>3</sup></div></div>
+    <div class="stat"><div class="n accent">62%</div>
+      <div class="l">stop abruptly, against medical advice — and 84% relapse<sup>4</sup></div></div>
+  </div>
+  <div class="quiet">≈1M women start this therapy every year in the US + Canada (est. — stock-and-flow calc, sources p.17), on prescriptions up 86% in four years.<sup>5,6</sup></div>
+</section>
+
+<!-- 4 · THE CONTRAST -->
+<section class="slide center">
+  <div class="eyebrow">Problem</div>
+  <h1>Symptoms last <span class="accent">7.4 years</span>.<br>Treatment dies in year&nbsp;<span class="accent">1</span>.<sup>7</sup></h1>
+</section>
+
+<!-- 5 · THESIS -->
+<section class="slide center">
+  <h1 style="max-width:20ch;">Titration is a craft run on recall.<br>
+  <span class="accent">It should be a data problem.</span></h1>
+</section>
+
+<!-- 6 · SOLUTION -->
+<section class="slide">
+  <div class="eyebrow">Solution</div>
+  <h1>A monitored season.<br><span class="soft">Not another tracker.</span></h1>
+  <div class="rows">
+    <div class="row"><div class="k">Day 1</div>
+      <div class="v">She snaps her prescription label — regimen logged in 30 seconds. Apple Health connects as the base.</div></div>
+    <div class="row"><div class="k">Every day</div>
+      <div class="v">A 30-second conversation asks what her clinician would ask. <b>“Day 18 on this dose — most women see this settle by week 4–5.”</b></div></div>
+    <div class="row"><div class="k">Every visit</div>
+      <div class="v">Her doctor gets one page — the dose-response curve, formatted as their own follow-up checklist. <b>Record replaces recall.</b></div></div>
+    <div class="row"><div class="k">Week ~20</div>
+      <div class="v">Stable dose. She graduates. The record stays.</div></div>
+  </div>
+</section>
+
+<!-- 7 · MECHANISM -->
+<section class="slide">
+  <div class="eyebrow">Why it works</div>
+  <h1>The loop is already proven.</h1>
+  <p class="sub">In a randomized JAMA trial, structured symptom reporting with alerts kept cancer patients on therapy <b>2 months longer</b> — and extended survival <b>5.2 months</b>.<sup>8</sup></p>
+  <div class="statrow">
+    <div class="stat"><div class="n">+2<span style="font-size:.4em;font-weight:700;"> mo</span></div><div class="l">longer on therapy</div></div>
+    <div class="stat"><div class="n">+5.2<span style="font-size:.4em;font-weight:700;"> mo</span></div><div class="l">median survival</div></div>
+  </div>
+  <div class="quiet">We transplant the same mechanism to hormone therapy — the therapy half of women abandon.</div>
+</section>
+
+<!-- 8 · MARKET -->
+<section class="slide">
+  <div class="eyebrow">Market · +86% prescribing growth in 4 years<sup>5</sup></div>
+  <h1>One engine. Three rings.</h1>
+  <div class="rings">
+    <div class="ring"><div class="when">Now</div><div class="amt">$50–200M<span style="font-size:.4em;font-weight:700;">/yr</span></div>
+      <div class="what">MHT titration episodes — ~1M new starts/yr (est.), growing 20%+, unowned</div></div>
+    <div class="ring"><div class="when">12–24 mo</div><div class="amt">$0.5–1B</div>
+      <div class="what">Menopause therapy management — same user’s whole treatment life; 3.2M on treatment → 5–6M by 2030</div></div>
+    <div class="ring"><div class="when">Platform</div><div class="amt">$2–4B</div>
+      <div class="what">Every therapy dosed by feel — GLP-1s, SSRIs, endocrine therapy: 20M+ North Americans on the same loop</div></div>
+  </div>
+  <div class="quiet">Sized honestly: the beachhead is small and winnable; the compounding is where the company is.</div>
+</section>
+
+<!-- 9 · WHY NOW -->
+<section class="slide">
+  <div class="eyebrow">Why now</div>
+  <h1>Five doors opened in 18&nbsp;months.</h1>
+  <div class="rows">
+    <div class="row"><div class="k">Regulatory</div><div class="v">FDA removed HRT’s 20-year boxed warning — prescriptions +86% since 2021<sup>5,6</sup></div></div>
+    <div class="row"><div class="k">Reimbursement</div><div class="v">2026 RTM expansion — treatment-response monitoring became billable, monthly<sup>9</sup></div></div>
+    <div class="row"><div class="k">Rails</div><div class="v">Apple opened the Medications API; iOS 27 ships perimenopause alerts. <b>The ledger is built — the judgment layer is not</b><sup>10</sup></div></div>
+    <div class="row"><div class="k">Drugs</div><div class="v">Two non-hormonal launches head-to-head — both hungry for real-world evidence<sup>11</sup></div></div>
+    <div class="row"><div class="k">Canada = lab</div><div class="v">NS pharmacists now prescribe MHT in a live Dalhousie trial; BC made MHT free<sup>12,13</sup> — the US is where the revenue is</div></div>
+  </div>
+</section>
+
+<!-- 10 · COMPETITION -->
+<section class="slide">
+  <div class="eyebrow">Competition</div>
+  <h1 style="font-size:clamp(26px,3.4vw,52px);">Everyone touches her — nobody owns the loop.</h1>
+  <div class="grid2">
+    <div class="ax axh"></div><div class="ax axv"></div>
+    <div class="lab" style="bottom:-3.2em;left:0;">Episodic</div>
+    <div class="lab" style="bottom:-3.2em;right:0;">Continuous</div>
+    <div class="lab" style="top:-2.6em;left:0;">Treatment decisions ↑</div>
+    <div class="lab" style="bottom:-5.4em;left:0;">Wellness diary ↓</div>
+    <div class="q" style="top:4%;left:2%;"><b>Clinics — Midi, Evernow</b>own the treatment; sample it every 6–12 weeks</div>
+    <div class="q" style="bottom:16%;right:2%;"><b>Trackers &amp; rails — Apple, Balance, Flo</b>continuous, clinically inert</div>
+    <div class="q" style="bottom:16%;left:2%;"><b>Pharmacy apps</b>refills, not response</div>
+    <div class="q ghost" style="top:22%;right:2%;">ChatGPT — advises, doesn’t chart</div>
+    <div class="q us" style="top:4%;right:2%;"><b>★ The titration loop — us</b>empty until Jan 2026: monitoring wasn’t billable</div>
+  </div>
+  <div class="quiet"><b style="color:var(--paper)">Advice evaporates. Records compound.</b> The real incumbent is quiet quitting — $13B/yr of misdirected demand.<sup>14</sup></div>
+</section>
+
+<!-- 11 · UVP -->
+<section class="slide center">
+  <div class="eyebrow">Unique value proposition</div>
+  <h1 class="serif" style="font-size:clamp(60px,10vw,170px);">“Unpredictable.”</h1>
+  <p class="sub">— the word she used, unprompted, in our interviews.<br><br>
+  <b>Her body became unpredictable. We give her back the forecast.</b></p>
+</section>
+
+<!-- 12 · BUSINESS MODEL -->
+<section class="slide">
+  <div class="eyebrow">Business model</div>
+  <h1>She pays $12 today.<br><span class="soft">The system pays tomorrow.</span></h1>
+  <div class="rows">
+    <div class="row"><div class="k">Now</div>
+      <div class="v"><b>$12/mo consumer</b> — proof of willingness to pay · &gt;90% gross margin</div></div>
+    <div class="row"><div class="k">Next</div>
+      <div class="v"><b>Pharma-sponsored seasons</b> — patient-support licenses per prescription, for drugs that need real-world evidence</div></div>
+    <div class="row"><div class="k">At scale</div>
+      <div class="v"><b>Monitoring reimbursement</b> — RTM share in the US<sup>9</sup>; pharmacist-service layer in Canada<sup>12</sup></div></div>
+  </div>
+  <div class="quiet">36-month obtainable: $2–5M ARR — 10–20k subscribers + one pharma pilot. Arithmetic, not hope.</div>
+</section>
+
+<!-- 13 · LEAN CANVAS -->
+<section class="slide">
+  <div class="eyebrow">Lean canvas — a test plan, not a portrait &nbsp;·&nbsp; <span style="color:var(--muted);letter-spacing:.1em;">INK = validated · PENCIL = testing · HYP = assumption</span></div>
+  <div class="canvas">
+    <div class="box tall"><h4>Problem <span class="tag">INK</span></h4>
+      <p>3–6 mo titration black box · ~50% quit yr 1, 62% abruptly · doctors dose from recall<br><br><i>Alternatives: ChatGPT at 2 a.m., “give it time,” quitting</i></p></div>
+    <div class="box"><h4>Solution <span class="tag">PENCIL</span></h4>
+      <p>Label-scan → daily 30-sec check-in → clinician one-pager + red-flag routing</p></div>
+    <div class="box tall"><h4>UVP <span class="tag">INK</span></h4>
+      <p><b>“Unpredictable” → we sell the forecast.</b><br><br>iRhythm for hormone therapy</p></div>
+    <div class="box"><h4>Unfair advantage <span class="tag">honest</span></h4>
+      <p>Today: none. Compounding: <b>consented data-days</b> — accrued, never bought</p></div>
+    <div class="box tall"><h4>Customers <span class="tag">INK/PENCIL</span></h4>
+      <p><b>User:</b> women starting MHT — the 2 a.m. googler<br><br><b>Payers, laddered:</b> self-pay → pharma → system</p></div>
+    <div class="box"><h4>Key metrics <span class="tag">PENCIL</span></h4>
+      <p>North star: weekly active monitored patients · kill-line: 8-wk completion &gt;60%</p></div>
+    <div class="box"><h4>Channels <span class="tag">HYP</span></h4>
+      <p>Learning: paid search, pharmacist cards · At scale (<b>#1 risk</b>): the prescription moment</p></div>
+    <div class="box"><h4>Costs <span class="tag">INK</span></h4>
+      <p>Solo build + AI tooling · clinical review · privacy architecture · LLM ~$1/user/mo</p></div>
+    <div class="box"><h4>Revenue <span class="tag">PENCIL/HYP</span></h4>
+      <p>$12/mo now → pharma sponsorship + RTM share at scale</p></div>
+  </div>
+</section>
+
+<!-- 14 · DISCOVERY -->
+<section class="slide">
+  <div class="eyebrow">Discovery · ~30 conversations</div>
+  <h1>Interviews killed two of our assumptions. <span class="accent">Good.</span></h1>
+  <div class="rows">
+    <div class="row"><div class="k">☠ SMS-first</div>
+      <div class="v">“Older users need texts” → they’re app-native → rebuilt as an app on Apple Health</div></div>
+    <div class="row"><div class="k">☠ Pharmacy tool</div>
+      <div class="v">Pharmacist (recorded): “compliance is an issue <b>for us</b>… it’s for the patient to use” → patient-first loop, pharmacist channel opened</div></div>
+    <div class="row"><div class="k">→ “Unpredictable”</div>
+      <div class="v">Her word, unprompted → became the value proposition</div></div>
+  </div>
+  <div class="quiet">Known gap: zero prescribers interviewed yet — the person our one-pager must convince. Next 19 interviews: 5 prescribers · 5 pharmacists · 10 patients, behaviour-based.</div>
+</section>
+
+<!-- 15 · LANDING PAGE -->
+<section class="slide">
+  <div class="eyebrow">Landing page · live smoke test</div>
+  <h1 style="font-size:clamp(26px,3.2vw,48px);">One page. One question.<br><span class="soft">We measure who pays.</span></h1>
+  <div class="mock">
+    <p class="mh">The dose takes months to get right.<br>Nobody tells you that.</p>
+    <p class="ms">Three to six months, for most women. Six-week waits between every change. A lot of lying awake, wondering if this is how it’s supposed to feel.</p>
+    <span class="pill">I’m in week ▾</span><span class="pill">and the worst part is ▾</span><br><br>
+    <span class="cta">Get this for your exact dose — $12/mo</span>
+  </div>
+  <div class="quiet">Two numbers tracked: email conversion, and conversion with the $12 price on screen. A/B: fact-led vs “unpredictable”-led headline.</div>
+</section>
+
+<!-- 16 · NEXT 90 DAYS -->
+<section class="slide">
+  <div class="eyebrow">Next 90 days</div>
+  <h1>Pencil → ink.</h1>
+  <div class="rows">
+    <div class="row"><div class="k">Validate</div><div class="v">19 behaviour-based interviews (5 prescribers first) + landing page live</div></div>
+    <div class="row"><div class="k">Build</div><div class="v">Founding cohort on the app — kill-line pre-registered: 8-week completion &gt;60%</div></div>
+    <div class="row"><div class="k">Prove</div><div class="v">Claims-data slice to pin the ~1M/yr estimate · first pharma conversation (price discovery)</div></div>
+  </div>
+  <div class="quiet" style="font-size:clamp(14px,1.4vw,19px);color:var(--paper);">
+    Advice evaporates. <span class="accent">Records compound.</span></div>
+</section>
+
+<!-- 17 · SOURCES -->
+<section class="slide">
+  <div class="eyebrow">Sources &amp; fact base</div>
+  <div class="srcs">
+    <div><span class="n">1</span><b>The Menopause Society (NAMS)</b>, 2022 Hormone Therapy Position Statement — dose individualized to symptom relief; routine hormone-level testing not recommended.</div>
+    <div><span class="n">2</span>Clinical consensus ranges; assessment 4–6 wks post-change, full effect ≤12 wks (NAMS-aligned patient guidance).</div>
+    <div><span class="n">3</span><b>Menopause / PubMed 10614674</b> — 12-month discontinuation 48% (younger) – 62% (older); side-effects the top stated reason (64–87%).</div>
+    <div><span class="n">4</span><b>Bunnewell et al., BJOG (2025)</b> systematic review, 69 studies — 62.4% stopped abruptly despite 91.6% of clinicians advising taper; 84.4% symptom recurrence.</div>
+    <div><span class="n">5</span><b>Epic Research (2026)</b> — HRT prescribing +86%, Q2 2021 → Q4 2025.</div>
+    <div><span class="n">6</span><b>Truveta Research (Feb 2026)</b> — 1 in 20 US women 45–54 hold an estrogen prescription; acceleration after FDA removed the boxed warning (2025). ~1M/yr new starts is a founder estimate (stock-and-flow: ~2.75M US users [JAMA 2024: ~5% of postmenopausal women] × 48–62% yr-1 discontinuation, growing stock; sensitivity 0.6–1.2M; claims-data validation in progress).</div>
+    <div><span class="n">7</span><b>Avis et al., JAMA Internal Medicine (2015)</b>, SWAN study, n=1,449 — median total VMS duration 7.4 years.</div>
+    <div><span class="n">8</span><b>Basch et al., JAMA (2017)</b>, RCT n=766 — web-based symptom reporting + nurse alerts: +5.2 mo median overall survival; ~2 mo longer on chemotherapy.</div>
+    <div><span class="n">9</span><b>CMS 2026 Physician Fee Schedule</b> — RTM expansion (new CPT 98985/98984/98979); ~$94/patient/mo typical full-engagement RTM (98977+98980, national averages).</div>
+    <div><span class="n">10</span><b>Apple WWDC25</b> — HealthKit Medications API (read medications &amp; dose events); <b>iOS 27</b> perimenopause/menopause features (Apple Newsroom / MacRumors, Jun 2026).</div>
+    <div><span class="n">11</span><b>Veozah (fezolinetant)</b> FDA approval 2023, Astellas — incl. OPTION-VMS phase-IV RWE study; <b>Lynkuet (elinzanetant)</b>, Bayer, 2025.</div>
+    <div><span class="n">12</span><b>PANS</b> Menopause Management Service (fee-based) &amp; NS pharmacist MHT prescribing; <b>MOMENT trial</b>, Dalhousie, ClinicalTrials.gov NCT07618039 (start Jul 1 2026).</div>
+    <div><span class="n">13</span><b>BC Ministry of Health / BC Family Doctors</b> — MHT coverage effective Mar 2026.</div>
+    <div><span class="n">14</span><b>AARP survey</b> (via GoodRx Research, 2025) — women spend ~$13B/yr out-of-pocket on menopause symptoms, &gt;$10B on non-medical products.</div>
+    <div><span class="n">·</span>Additional context: Mayo Clinic Proceedings 2023 ($1.8B lost work-time, $26.6B with medical costs); Manulife group-benefits data (HRT claims +20.7%, 2020–23); CMA (5.9M Canadians without regular primary care); Menopause Foundation of Canada (2022, Leger n=1,023 — 75% found physician advice unhelpful). Full source URLs: research repo, docs 01–14.</div>
+  </div>
+</section>
+
+</div>
+
+<div class="navzone" id="prev" aria-label="Previous slide"></div>
+<div class="navzone" id="next" aria-label="Next slide"></div>
+<div id="bar"></div>
+<div id="count">1 / 17</div>
+<div id="hint">← → · click sides · F fullscreen</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0;
+  var bar=document.getElementById('bar'),count=document.getElementById('count');
+  function go(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('active',k===i);});
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    count.textContent=(i+1)+' / '+slides.length;
+  }
+  document.getElementById('next').addEventListener('click',function(){go(i+1);});
+  document.getElementById('prev').addEventListener('click',function(){go(i-1);});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1);}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1);}
+    if(e.key==='Home'){go(0);} if(e.key==='End'){go(slides.length-1);}
+    if(e.key==='f'||e.key==='F'){
+      if(document.fullscreenElement){document.exitFullscreen();}
+      else{document.documentElement.requestFullscreen();}
+    }
+  });
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return;
+    var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){go(dx<0?i+1:i-1);}
+    x0=null;
+  },{passive:true});
+  go(0);
+})();
+</script>
